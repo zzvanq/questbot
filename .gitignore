@@ -1,0 +1,9 @@
+deploy/*.log
+__pycache__/
+.vscode/
+db.sqlite3
+**/*.pyc
+media/*
+.idea/
+debug.log
+.env
