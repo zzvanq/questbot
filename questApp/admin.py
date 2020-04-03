@@ -7,8 +7,7 @@ from .models import Option, PlayersQuest, PlayersQuestCompleted, Quest, Step
 class PlayersQuestAdmin(admin.ModelAdmin):
     list_display = (
         "player",
-        "quest",
-        "attempts_num",
+        "quest"
     )
     list_filter = ("quest__name", "player__player_type")
     search_fields = ("player__name",)

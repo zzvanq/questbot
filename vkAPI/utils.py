@@ -157,28 +157,6 @@ def build_step(vk, event, upload, job_queue, step, player_quest, text="Вы по
         )
 
 
-def attempts_num_menu(
-    vk,
-    event,
-    text="Этот квест еще не оплачен\nСколько попыток победить вы хотите приобрести?",
-):
-    button_list = VkKeyboard()
-    button_list.add_button(settings.BOT_MENU["BUY_ATTEMPTS"]["EMOJI"] + " 1 попытку")
-    button_list.add_line()
-    button_list.add_button(settings.BOT_MENU["BUY_ATTEMPTS"]["EMOJI"] + " 2 попытки")
-    button_list.add_line()
-    button_list.add_button(settings.BOT_MENU["BUY_ATTEMPTS"]["EMOJI"] + " 5 попыток")
-    button_list.add_line()
-    button_list.add_button(settings.BOT_MENU["BUY_ATTEMPTS"]["EMOJI"] + " 10 попыток")
-
-    vk.messages.send(
-        peer_id=event.obj.from_id,
-        random_id=get_random_id(),
-        message=text,
-        keyboard=button_list.get_keyboard(),
-    )
-
-
 def send_referral_input(vk, event):
     player, created = get_or_create_player(vk, event, join=True)
     if created:

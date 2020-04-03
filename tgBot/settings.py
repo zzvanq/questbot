@@ -43,11 +43,6 @@ DEBUG = True
 #             },
 #         }
 #     }
-#     CACHES = {
-#         'default': {
-#             'BACKEND': 'django.core.cache.backends.dummy.DummyCache',
-#         }
-#     }
 
 ALLOWED_HOSTS = ["*"]
 
@@ -62,6 +57,9 @@ INSTALLED_APPS = [
     "django.contrib.sessions",
     "django.contrib.messages",
     "django.contrib.staticfiles",
+
+    'constance',
+    'constance.backends.database',
 
     # Custom apps
     "questApp",
@@ -123,13 +121,6 @@ else:
         }
     }
 
-    CACHES = {
-        "default": {
-            "BACKEND": "django.core.cache.backends.memcached.MemcachedCache",
-            "LOCATION": "127.0.0.1:11211",
-        }
-    }
-
 # Password validation
 # https://docs.djangoproject.com/en/2.1/ref/settings/#auth-password-validators
 
@@ -170,25 +161,57 @@ MEDIA_URL = "/media/"
 BOT_TG_ID = "@"
 
 # Telegram API
-TG_PROXY_URL = ""
+
 if DEBUG:
     BOT_TG_ID += "Quest_teshyu_bot"
     TG_ACCESS_TOKEN = os.environ.get("TG_ACCESS_TOKEN")
-    TG_PROXY_URL = "http://64.225.24.13:3128"
+    TG_PROXY_URL = "http://155.138.148.76:8080"
     VK_ACCESS_TOKEN = os.environ.get("VK_ACCESS_TOKEN")
     VK_GROUP_ID = "130703093"
 else:
     BOT_TG_ID += "indecent_quests_bot"
     TG_ACCESS_TOKEN = os.environ.get("TG_ACCESS_TOKEN")
+    TG_PROXY_URL = ""
     VK_ACCESS_TOKEN = os.environ.get("VK_ACCESS_TOKEN")
     VK_GROUP_ID = "164636367"
 
 TG_JOIN_URL = "https://teleg.run/"
 
-MAIN_MENU_TEXT = "Главное меню" + "\n"
+CONSTANCE_BACKEND = 'constance.backends.database.DatabaseBackend'
 
-GAME_WIN_TEXT = 'Вы победили! Чтобы с вами можно было связаться, задайте контакт для связи в меню "🛠️ Настройки"'
-GAME_LOST_TEXT = "Вы проиграли."
+CONSTANCE_CONFIG = {
+    "MY_GAMES": ("Мои квесты", " "),
+    "ALL_GAMES": ("Все квесты", " "),
+    "MAIN_MENU": ("Главное меню", " "),
+    "ASK_TO_RESTART": ("Начать заново", " "),
+    "CONFIRM_TO_RESTART": ("Да, начать заново", " "),
+    "RETURN_TO_GAME": ("Вернуться в игру", " "),
+    "START_WO_REFERRER": ("Пропустить", " "),
+    "START_GAME": ("Начать игру", " "),
+    "SETTINGS": ("Настройки", " "),
+    "CANCEL_CONTACT": ("Отменить контакт", " "),
+    "ADD_CONTACT": ("Добавить контакт", " "),
+    "MAIN_MENU_TEXT": ("Главное меню\n", " "),
+    "GAME_WIN_TEXT": ('Вы победили! Чтобы с вами можно было связаться, задайте контакт для связи в меню ', " "),
+    "GAME_LOST_TEXT": ("Вы проиграли.", " "),
+    "GAME_START_BUTTON": ('Чтобы начать игру нажмите', " "),
+    "BUY_LINK_TEXT": ("Ссылка для покупки квеста:", " "),
+    "QUEST_IS_NOT_AVAILABLE": ("Квест недоступен", " "),
+    "QUEST_IS_ON_AWARDING": ("Этот квест находится в розыгрыше!", " "),
+    "QUEST_DESCRIPTION": ("Описание квеста:", " "),
+    "QUEST_CONFIRM_RESTART": ("Вы уверены, что хотите начать игру заново?", " "),
+    "QUEST_ASK_RESTART": ('Чтобы начать игру заново, нажмите', " "),
+    "QUEST_ATTEMPTS_EXCEEDED": ("Вы больше не можете продолжать этот квест", " "),
+    "QUESTS_ALL": ("Список всех квестов:", " "),
+    "PLAYER_QUESTS_LIST": ("Список ваших квестов:", " "),
+    "PLAYER_NO_QUESTS": ("В данный момент вы не проходите ни один квест.", " "),
+    "PLAYER_PLAYING": ("В данный момент вы проходите квест:", " "),
+    "PLAYER_REFERRAL": ("Это ваша реферальная ссылка. Отправьте её другу!", " "),
+    "PLAYER_REFERRAL_SET": ("Вы успешно задали пригласившего пользователя", " "),
+    "PLAYER_CONTACT": ("Нынешний контакт для связи с вами:", " "),
+    "PLAYER_CONTACT_SET": ("Чтобы задать контакт для связи отправьте его следующим сообщением", " "),
+    "PLAYER_CONTACT_SET_DONE": ("Вы задали новый контакт для связи", " ",)
+}
 
 CACHING_TIMEOUTS = {
     "STEP": {"TIMEOUT": 60 * 5},
@@ -200,17 +223,17 @@ CACHING_TIMEOUTS = {
 
 
 BOT_MENU = {
-    "MY_GAMES": {"EMOJI": "🎮", "TEXT": "Мои квесты"},
-    "BUY_ATTEMPTS": {"EMOJI": "💰"},
-    "ALL_GAMES": {"EMOJI": "🎲", "TEXT": "Все квесты"},
-    "MAIN_MENU": {"EMOJI": "⚽", "TEXT": "Главное меню"},
-    "ASK_TO_RESTART": {"EMOJI": "♻️", "TEXT": "Начать заново"},
-    "CONFIRM_TO_RESTART": {"EMOJI": "♻️", "TEXT": "Да, начать заново"},
-    "RETURN_TO_GAME": {"EMOJI": "⏪", "TEXT": "Вернуться в игру"},
-    "START_WO_REFERRER": {"EMOJI": "⏩", "TEXT": "Пропустить"},
-    "START_GAME": {"EMOJI": "🏁", "TEXT": "Начать игру"},
-    "SETTINGS": {"EMOJI": "🛠️", "TEXT": "Настройки"},
-    "CANCEL_CONTACT": {"EMOJI": "❌", "TEXT": "Отменить контакт"},
-    "ADD_CONTACT": {"EMOJI": "📱", "TEXT": "Добавить контакт"},
-    "GAME": {"EMOJI": "♟️"},
+    "MY_GAMES": "🎮",
+    "BUY_GAME": "💰",
+    "ALL_GAMES": "🎲",
+    "MAIN_MENU": "⚽",
+    "ASK_TO_RESTART": "♻️",
+    "CONFIRM_TO_RESTART": "♻️",
+    "RETURN_TO_GAME": "⏪",
+    "START_WO_REFERRER": "⏩",
+    "START_GAME": "🏁",
+    "SETTINGS": "🛠️",
+    "CANCEL_CONTACT": "❌",
+    "ADD_CONTACT": "📱",
+    "GAME": "♟️",
 }

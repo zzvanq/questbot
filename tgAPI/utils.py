@@ -15,8 +15,10 @@ from questApp import quest_utils
 from telegram import KeyboardButton, ReplyKeyboardMarkup
 
 
-def build_menu(buttons, n_cols, header_buttons:list = None, footer_buttons:list = None):
-    menu = [buttons[i: i + n_cols] for i in range(0, len(buttons), n_cols)]
+def build_menu(
+    buttons, n_cols, header_buttons: list = None, footer_buttons: list = None
+):
+    menu = [buttons[i : i + n_cols] for i in range(0, len(buttons), n_cols)]
 
     if header_buttons:
         menu = [*header_buttons, *menu]
@@ -30,15 +32,20 @@ def build_menu(buttons, n_cols, header_buttons:list = None, footer_buttons:list 
 def get_or_create_player(bot, update, args=None):
     user = update.effective_user
     referred_by = None
+
     if args:
         referred_by = Player.objects.filter(user_id=args[0]).first()
+
     user_name = str(user.first_name or "") + "/" + str(user.last_name or "")
+
     if user.username:
         user_login = "TG:" + user.username
     else:
         user_login = None
+
     user_id = user.id
     player_type = "TG"
+
     return quest_utils.get_or_create_player(
         user_name, user_login, user_id, referred_by, player_type
     )
@@ -142,20 +149,3 @@ def build_step(bot, update, step, job_queue, player_quest, text="Вы побед
             text + "\nНачать заново?",
             reply_markup=reply_markup,
         )
-
-
-def attempts_num_menu(
-    bot,
-    update,
-    text="Этот квест еще не оплачен\nСколько попыток победить вы хотите приобрести?",
-):
-    button_list = [
-        KeyboardButton(settings.BOT_MENU["BUY_ATTEMPTS"]["EMOJI"] + " 1 попытку"),
-        KeyboardButton(settings.BOT_MENU["BUY_ATTEMPTS"]["EMOJI"] + " 2 попытки"),
-        KeyboardButton(settings.BOT_MENU["BUY_ATTEMPTS"]["EMOJI"] + " 5 попыток"),
-        KeyboardButton(settings.BOT_MENU["BUY_ATTEMPTS"]["EMOJI"] + " 10 попыток"),
-    ]
-    reply_markup = ReplyKeyboardMarkup(
-        build_menu(button_list, n_cols=1), resize_keyboard=True
-    )
-    bot.send_message(update.effective_chat.id, text, reply_markup=reply_markup)

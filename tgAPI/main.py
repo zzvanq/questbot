@@ -13,6 +13,7 @@ import logging
 from django.conf import settings
 from telegram.utils.request import Request
 from telegram.ext import messagequeue as mq
+from constance import config
 
 from questApp import quest_utils
 from tgBot.bots import TGBot
@@ -42,17 +43,21 @@ def incoming_commands(bot, update, job_queue):
     TGBot.get_command(message, bot_ctx)()
 
 
-def start_main_menu(bot, update, text=settings.MAIN_MENU_TEXT, args=None):
+def start_main_menu(bot, update, text=config.MAIN_MENU_TEXT, args=None):
     player, _ = utils.get_or_create_player(bot, update, args)
     player_quests = player.has_quests
 
-    button_list = [
-        KeyboardButton(quest_utils.menu_text_full("ALL_GAMES")),
-        KeyboardButton(quest_utils.menu_text_full("SETTINGS")),
-    ]
-
     if player_quests:
-        button_list = [KeyboardButton(quest_utils.menu_text_full("MY_GAMES")), *button_list]
+        button_list = [
+            KeyboardButton(quest_utils.menu_text_full("MY_GAMES")),
+            KeyboardButton(quest_utils.menu_text_full("ALL_GAMES")),
+            KeyboardButton(quest_utils.menu_text_full("SETTINGS")),
+        ]
+    else:
+        button_list = [
+            KeyboardButton(quest_utils.menu_text_full("ALL_GAMES")),
+            KeyboardButton(quest_utils.menu_text_full("SETTINGS")),
+        ]
 
     reply_markup = ReplyKeyboardMarkup(
         utils.build_menu(button_list, n_cols=1), resize_keyboard=True
