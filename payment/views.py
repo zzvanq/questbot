@@ -1,3 +1,4 @@
+import os
 import json
 import hashlib
 
@@ -8,96 +9,40 @@ from player.models import Player
 from datetime import datetime
 from .models import Payment
 
-PROJECT_SECRET_KEY = "saVhFLGhpP6f8HIX"
+MERCHANT_IPS = ["185.162.128.38", "185.162.128.39", "185.162.128.88"]
+MERCHANT_SECRET_KEY = os.getenv("MERCHANT_SECRET_KEY")
 
 
-def _check_signature(body, auth):
-    jsondata = str(body)
-    jsondata = jsondata.replace(" ", "").replace("'", '"')
-    hash_val = jsondata + PROJECT_SECRET_KEY
-    access = hashlib.sha1(hash_val.encode())
-    sign_in = auth.split(" ")[1]
-    sign_out = access.hexdigest()
-
-    return sign_in == sign_out
+def check_signature(sign, merchant_id, amount, pay_id):
+    sign_real = hashlib.md5(f"{merchant_id}:{amount}:{pay_id}:{MERCHANT_SECRET_KEY}").hexdigest()
+    return sign_real == sign
 
 
 @csrf_exempt
-def xsollaWebhook(request):
-    jsondata = json.loads(request.body)
-    if _check_signature(jsondata, request.META.get("HTTP_AUTHORIZATION", None)):
-        notif_type = jsondata["notification_type"]
-        if notif_type == "payment":
-            # Successed payment
-            payment = jsondata["payment_details"]
-            value = payment["payout"]["amount"]
-            value_wo = payment["payment"]["amount"]
-            user = jsondata["user"]["id"]
-            transaction = jsondata["transaction"]
-            game_id = transaction["external_id"]
-            method = transaction["payment_method"]
-            agreement = transaction["agreement"]
-            payment_id = transaction["id"]
-            date_created = transaction["payment_date"]
-            date_created = datetime.strptime(date_created, "%Y-%m-%dT%H:%M:%S+03:00")
-            quest_pk, quest_name, attempts_num = game_id.split(":")
+def anypay_webhook(request):
+    ip = request.META.get('HTTP_X_REAL_IP', request.META.get("REMOTE_ADDR"))
+    ip_status = ip in MERCHANT_IPS
 
-            player = Player.objects.get(user_login=user)
-            quest = Quest.objects.get(pk=quest_pk)
+    content = json.loads(request.body)
+    merchant_id = content["merchant_id"]
+    amount = content["amount"]
+    pay_id = content["pay_id"]
 
-            player_quest = PlayersQuest.objects.get(player=player, quest=quest)
-            player_quest.attempts_num += attempts_num
-            player_quest.save()
-            payment, created = Payment.objects.get_or_create(
-                player=player,
-                quest=quest,
-                value=value,
-                value_wo=value_wo,
-                method=method,
-                agreement=agreement,
-                payment_id=payment_id,
-                date_created=date_created,
-                is_in_awarding_time=quest.is_awarding,
-            )
-            if created:
-                payment.save()
-            return HttpResponse(status=200)
-        elif notif_type == "refund" or notif_type == "afs_reject":
-            # Payment refund
-            user = jsondata["user"]["id"]
-            game_id = jsondata["transaction"]["external_id"]
+    sign = content["sign"]
+    sign_status = check_signature(sign, merchant_id, amount, pay_id)
 
-            player = Player.objects.get(user_login=user)
-            quest = Quest.objects.get(pk=game_id)
-            payment = Payment.objects.get(player=player, quest=quest)
-            payment.remove()
-            player_quest = PlayersQuest.objects.get(player=player, quest=quest)
-            player_quest.attempts_num = 0
-            player_quest.save()
-        elif notif_type == "user_validation":
-            user = jsondata["user"]["id"]
-            player = Player.objects.filter(user_login=user).exists()
-            if player:
-                return HttpResponse(status=200)
-            else:
-                response = JsonResponse(
-                    status=401, data={"error": {"code": "INVALID_USER"}}
-                )
-                return response
-        elif notif_type == "user_search":
-            user = jsondata["user"]["public_id"]
-            player = Player.objects.filter(user_login=user).exists()
-            if player:
-                return JsonResponse(
-                    status=200, data={"user": {"id": jsondata["user"]["public_id"]}}
-                )
-            else:
-                response = JsonResponse(
-                    status=404, data={"error": {"code": "INVALID_USER"}}
-                )
-                return response
+    if sign_status and ip_status:
+        profit = content["profit"]
+        transaction_id = content["transaction_id"]
+        date_pay = content["pay_date"]
+
+        payment = Payment.objects.get(id=pay_id)
+        payment.amount = amount
+        payment.profit = profit
+        payment.transaction_id = transaction_id
+        payment.date_pay = date_pay
+        payment.save()
+
+        return HttpResponse(status=200)
     else:
-        response = JsonResponse(
-            status=403, data={"error": {"code": "INVALID_SIGNATURE"}}
-        )
-        return response
+        return HttpResponse(status=400)

@@ -23,13 +23,12 @@ class Payment(models.Model):
         blank=True,
     )
 
-    value = models.DecimalField("Сумма с комиссией", max_digits=7, decimal_places=3)
-    value_wo = models.DecimalField("Сумма без комиссии", max_digits=7, decimal_places=3)
-    method = models.CharField("ID способа оплаты", max_length=256)
-    payment_id = models.CharField("ID заказа", max_length=256)
-    agreement = models.CharField("ID соглашения", max_length=256)
-    date_created = models.DateTimeField("Дата оплаты")
-    is_is_awarding_time = models.BooleanField("Во время розыгрыша", default=False)
+    amount = models.DecimalField("Сумма к оплате", max_digits=15, decimal_places=3)
+    profit = models.DecimalField("Зачисленино на ваш счет", max_digits=15, decimal_places=3, default=0)
+    transaction_id = models.CharField("ID заказа", max_length=256, null=True, blank=True)
+    date_create = models.DateTimeField("Дата создания", auto_now_add=True)
+    date_pay = models.DateTimeField("Дата оплаты", null=True, blank=True)
+    is_awarding_time = models.BooleanField("Во время розыгрыша", default=False)
 
     def __str__(self):
         return self.player.name + " " + self.quest.name

@@ -26,7 +26,7 @@ commands = settings.BOT_MENU
 
 class BaseBot(ABC):
     @abstractmethod
-    def send_quest_info(self, player_quest, text=""):
+    def send_quest_info(self, player_quest):
         ...
 
     @abstractmethod
@@ -123,29 +123,15 @@ class TGBot(BaseBot):
         self.job_queue = job_queue
         self.player, self.is_created = tg_utils.get_or_create_player(bot, update, args)
 
-    def send_quest_info(self, player_quest, text=config.BUY_LINK_TEXT):
-        if not player_quest.quest.is_active:
-            if not player_quest.quest.check_permission(player=player_quest.player):
-                self.start_main_menu(
-                    text=config.config.config.config.config.config.config.config.config.config.config.config.config.config.config.config.config.config.config.config.config.config.config.config.config.config.config.config.config.config.config.config.config.config.QUEST_IS_NOT_AVAILABLE
-                )
-                return
-
+    def send_quest_info(self, player_quest):
         if not player_quest.is_paid:
-            # TODO: Change for new payment system
+            payment_url = payments.make_payment(
+                self.player.user_id,
+                player_quest.quest_id,
+                player_quest.quest.price
+            )
             self.start_main_menu(
-                text=text
-                + ' "'
-                + player_quest.quest.name
-                + '"\n'
-                + payments.make_payment(
-                    self.player.user_id,
-                    player_quest.quest.price,
-                    str(player_quest.quest.pk)
-                    + ":"
-                    + slugify(player_quest.quest.name, separator=""),
-                )
-                + "\n",
+                text=f"{config.BUY_LINK_TEXT}{payment_url}"
             )
 
         awarding_description = (
@@ -197,12 +183,12 @@ class TGBot(BaseBot):
         )
 
     def start_my_quests_menu(self):
-        player_quests = self.player.get_my_quests(select_related=["quest"])
+        player_quests = self.player.get_my_quests(select_related=("quest",))
         if player_quests:
             button_list = [
                 KeyboardButton(commands["GAME"] + " " + player_quest.quest.name)
                 for player_quest in player_quests
-                if player_quest.quest.is_active or self.player.is_staff
+                if player_quest.quest.check_permission(self.player)
             ]
             button_list.append(KeyboardButton(quest_utils.menu_text_full("MAIN_MENU")))
             reply_markup = ReplyKeyboardMarkup(
@@ -220,7 +206,7 @@ class TGBot(BaseBot):
         button_list = [
             KeyboardButton(commands["GAME"] + " " + quest.name)
             for quest in quests
-            if quest.is_active or self.player.is_staff
+            if quest.check_permission(self.player)
         ]
         button_list.append(KeyboardButton(quest_utils.menu_text_full("MAIN_MENU")))
         reply_markup = ReplyKeyboardMarkup(
@@ -264,20 +250,17 @@ class TGBot(BaseBot):
         )
 
     def start_confirm_restart_menu(self):
-        active_quest = self.player.get_active_quest(select_related=["quest"])
+        active_quest = self.player.get_active_quest(select_related=("quest",))
 
         if active_quest:
             if not active_quest.is_attempts_exceeded:
                 if active_quest.is_paid:
                     active_quest.clear_game()
 
-                    tg_utils.build_step(
-                        self.bot,
-                        self.update,
-                        active_quest.get_current_step(),
-                        self.job_queue,
-                        active_quest,
-                    )
+                    if active_quest.quest.check_permission(self.player):
+                        self.start_playerquest(active_quest, active_quest.quest)
+                    else:
+                        self.start_main_menu(text=config.QUEST_IS_NOT_AVAILABLE)
                 else:
                     self.send_quest_info(active_quest)
             else:
@@ -285,13 +268,14 @@ class TGBot(BaseBot):
 
     def start_game_menu(self):
         active_quest = self.player.get_active_quest(
-            select_related=["quest"],
-            prefetch_related=[
+            select_related=("quest",),
+            prefetch_related=(
                 "changes",
                 "current_step__options",
                 "current_step__quest",
-            ],
+            ),
         )
+
         if active_quest:
             tg_utils.build_step(
                 self.bot,
@@ -302,7 +286,7 @@ class TGBot(BaseBot):
             )
 
     def start_settings_menu(self):
-        active_quest = self.player.get_active_quest(select_related=["quest"])
+        active_quest = self.player.get_active_quest(select_related=("quest",))
         button_list = [
             KeyboardButton(quest_utils.menu_text_full("ADD_CONTACT")),
             KeyboardButton(quest_utils.menu_text_full("MAIN_MENU")),
@@ -364,63 +348,68 @@ class TGBot(BaseBot):
         self.message = self.message.replace(commands["GAME"] + " ", "")
         quest = quest_utils.get_quest_by_name(name=self.message)
 
-        if quest and quest.check_permission(player=self.player):
-            active_quest = self.player.get_active_quest(
-                select_related=["quest"],
-                prefetch_related=["current_step__options", "changes"],
-            )
-
-            if active_quest:
-                # Player has active quest
-                current_step = active_quest.get_current_step()
-
-                if active_quest.quest.name == quest.name:
-                    # Player chooses his active quest
-                    if current_step:
-                        # Player quest is not ended, so just continue
-                        if active_quest.is_paid:
-                            tg_utils.build_step(
-                                self.bot,
-                                self.update,
-                                current_step,
-                                self.job_queue,
-                                active_quest,
-                            )
-                        else:
-                            self.send_quest_info(active_quest)
-                    else:
-                        # Quest ended, so suggest to replay it
-                        if active_quest.is_paid:
-                            button_list = [
-                                KeyboardButton(quest_utils.menu_text_full("MAIN_MENU")),
-                                KeyboardButton(
-                                    quest_utils.menu_text_full("ASK_TO_RESTART")
-                                ),
-                            ]
-
-                            reply_markup = ReplyKeyboardMarkup(
-                                tg_utils.build_menu(button_list, n_cols=1),
-                                resize_keyboard=True,
-                            )
-
-                            self.bot.send_message(
-                                self.update.message.chat_id,
-                                config.QUEST_ASK_RESTART
-                                + ' "'
-                                + quest_utils.menu_text_full("CONFIRM_TO_RESTART")
-                                + '"',
-                                reply_markup=reply_markup,
-                            )
-                else:
-                    # Player chooses another quest
-                    player_quest = self.player.get_quest_by_pk(quest=quest)
-                    self.start_playerquest(player_quest, quest)
-            else:
-                # Player has no active quest and chooses one to start
-                new_player_quest = self.player.get_quest_by_pk(
-                    quest, select_related=["current_step"]
+        if quest:
+            if quest.check_permission(player=self.player):
+                active_quest = self.player.get_active_quest(
+                    select_related=("quest",),
+                    prefetch_related=("current_step__options", "changes"),
                 )
-                self.start_playerquest(new_player_quest, quest)
+
+                if active_quest:
+                    # Player has active quest
+                    current_step = active_quest.get_current_step()
+
+                    if active_quest.quest.name == quest.name:
+                        # Player chooses his active quest
+                        if current_step:
+                            # Player quest is not ended, so just continue
+                            if active_quest.is_paid:
+                                tg_utils.build_step(
+                                    self.bot,
+                                    self.update,
+                                    current_step,
+                                    self.job_queue,
+                                    active_quest,
+                                )
+                            else:
+                                self.send_quest_info(active_quest)
+                        else:
+                            # Quest ended, so suggest to replay it
+                            if active_quest.is_paid:
+                                button_list = [
+                                    KeyboardButton(
+                                        quest_utils.menu_text_full("MAIN_MENU")
+                                    ),
+                                    KeyboardButton(
+                                        quest_utils.menu_text_full("ASK_TO_RESTART")
+                                    ),
+                                ]
+
+                                reply_markup = ReplyKeyboardMarkup(
+                                    tg_utils.build_menu(button_list, n_cols=1),
+                                    resize_keyboard=True,
+                                )
+
+                                self.bot.send_message(
+                                    self.update.message.chat_id,
+                                    config.QUEST_ASK_RESTART
+                                    + ' "'
+                                    + quest_utils.menu_text_full("CONFIRM_TO_RESTART")
+                                    + '"',
+                                    reply_markup=reply_markup,
+                                )
+                    else:
+                        # Player chooses another quest
+                        player_quest = self.player.get_quest_by_pk(quest=quest)
+                        self.start_playerquest(player_quest, quest)
+                else:
+                    # Player has no active quest and chooses one to start
+                    new_player_quest = self.player.get_quest_by_pk(
+                        quest, select_related=("current_step",)
+                    )
+                    self.start_playerquest(new_player_quest, quest)
+            else:
+                self.start_main_menu(text=config.QUEST_IS_NOT_AVAILABLE)
 
     def start_playerquest(self, player_quest, quest):
         if player_quest:
@@ -449,8 +438,8 @@ class TGBot(BaseBot):
             self.start_main_menu(text=config.PLAYER_CONTACT_SET_DONE)
         else:
             player_quest = self.player.get_active_quest(
-                select_related=["quest", "current_step", "player"],
-                prefetch_related=["changes"],
+                select_related=("quest", "current_step", "player"),
+                prefetch_related=("changes",),
             )
             quest = player_quest.quest
 
@@ -473,9 +462,7 @@ class TGBot(BaseBot):
                             (
                                 is_winning,
                                 current_step,
-                            ) = quest_utils.handle_option_message(
-                                self.player, player_quest, option
-                            )
+                            ) = quest_utils.handle_option_message(player_quest, option)
                             result_text = (
                                 config.GAME_WIN_TEXT
                                 if is_winning
@@ -540,12 +527,13 @@ class VKBot(BaseBot):
         )
 
     def start_my_quests_menu(self):
-        player_quests = self.player.get_my_quests(select_related=["quest"])
+        player_quests = self.player.get_my_quests(select_related=("quest",))
         if player_quests:
             button_list = VkKeyboard()
             for item in player_quests:
-                button_list.add_button(commands["GAME"] + " " + item.quest.name)
-                button_list.add_line()
+                if item.quest.check_permission(self.player):
+                    button_list.add_button(commands["GAME"] + " " + item.quest.name)
+                    button_list.add_line()
             button_list.add_button(quest_utils.menu_text_full("MAIN_MENU"))
 
             self.bot.messages.send(
@@ -559,7 +547,7 @@ class VKBot(BaseBot):
         quests = quest_utils.get_all_quests()
         button_list = VkKeyboard()
         for item in quests:
-            if self.player.is_staff or item.is_active:
+            if item.check_permission(self.player):
                 button_list.add_button(commands["GAME"] + " " + item.name)
                 button_list.add_line()
         button_list.add_button(quest_utils.menu_text_full("MAIN_MENU"))
@@ -591,22 +579,15 @@ class VKBot(BaseBot):
             keyboard=button_list.get_keyboard(),
         )
 
-    def send_quest_info(self, player_quest, text=config.BUY_LINK_TEXT):
+    def send_quest_info(self, player_quest):
         if not player_quest.is_paid:
-            # TODO: Change for new payment system
+            payment_url = payments.make_payment(
+                self.player.user_id,
+                player_quest.quest_id,
+                player_quest.quest.price
+            )
             self.start_main_menu(
-                text=text
-                + ' "'
-                + player_quest.quest.name
-                + '"\n'
-                + payments.make_payment(
-                    self.player.user_id,
-                    player_quest.quest.price,
-                    str(player_quest.quest.pk)
-                    + ":"
-                    + slugify(player_quest.quest.name, separator=""),
-                )
-                + "\n",
+                text=f"{config.BUY_LINK_TEXT}{payment_url}"
             )
 
         awarding_description = (
@@ -678,29 +659,26 @@ class VKBot(BaseBot):
         )
 
     def start_confirm_restart_menu(self):
-        active_quest = self.player.get_active_quest(select_related=["quest"])
+        active_quest = self.player.get_active_quest(select_related=("quest",))
+
         if active_quest:
             if active_quest.is_paid:
                 active_quest.clear_game()
-                vk_utils.build_step(
-                    self.bot,
-                    self.update,
-                    self.upload,
-                    self.job_queue,
-                    active_quest.get_current_step(),
-                    active_quest,
-                )
+                if active_quest.quest.check_permission(self.player):
+                    self.start_playerquest(active_quest, active_quest.quest)
+                else:
+                    self.start_main_menu(text=config.QUEST_IS_NOT_AVAILABLE)
             else:
                 self.send_quest_info(active_quest)
 
     def start_game_menu(self):
         active_quest = self.player.get_active_quest(
-            select_related=["quest"],
-            prefetch_related=[
+            select_related=("quest",),
+            prefetch_related=(
                 "changes",
                 "current_step__options",
                 "current_step__quest",
-            ],
+            ),
         )
         if active_quest:
             vk_utils.build_step(
@@ -713,7 +691,7 @@ class VKBot(BaseBot):
             )
 
     def start_settings_menu(self):
-        active_quest = self.player.get_active_quest(select_related=["quest"])
+        active_quest = self.player.get_active_quest(select_related=("quest",))
         button_list = VkKeyboard()
 
         reply_text = config.PLAYER_NO_QUESTS
@@ -762,64 +740,69 @@ class VKBot(BaseBot):
         self.message = self.message.replace(commands["GAME"] + " ", "")
         quest = quest_utils.get_quest_by_name(name=self.message)
 
-        if quest and quest.check_permission(player=self.player):
-            active_quest = self.player.get_active_quest(
-                select_related=["quest"],
-                prefetch_related=["current_step__options", "changes"],
-            )
-
-            if active_quest:
-                # Player has active quest
-                current_step = active_quest.get_current_step()
-
-                if active_quest.quest.name == quest.name:
-                    # Player chooses his active quest
-                    if current_step:
-                        # Player quest is not ended, so just continue
-                        if active_quest.is_paid:
-                            vk_utils.build_step(
-                                self.bot,
-                                self.update,
-                                self.upload,
-                                self.job_queue,
-                                current_step,
-                                active_quest,
-                            )
-                        else:
-                            self.send_quest_info(active_quest)
-                    else:
-                        # Quest ended, so suggest to replay it
-                        if active_quest.is_paid:
-                            button_list = VkKeyboard()
-                            button_list.add_button(
-                                quest_utils.menu_text_full("MAIN_MENU")
-                            )
-                            button_list.add_line()
-                            button_list.add_button(
-                                quest_utils.menu_text_full("ASK_TO_RESTART")
-                            )
-
-                            self.bot.messages.send(
-                                peer_id=self.update.obj.from_id,
-                                random_id=get_random_id(),
-                                message=(
-                                    config.QUEST_ASK_RESTART
-                                    + ' "'
-                                    + quest_utils.menu_text_full("CONFIRM_TO_RESTART")
-                                    + '"'
-                                ),
-                                keyboard=button_list.get_keyboard(),
-                            )
-                else:
-                    # Player chooses another quest
-                    player_quest = self.player.get_quest_by_pk(quest=quest)
-                    self.start_playerquest(player_quest, quest)
-            else:
-                # Player has no active quest and chooses one to start
-                new_player_quest = self.player.get_quest_by_pk(
-                    quest, select_related=["current_step"]
+        if quest:
+            if quest.check_permission(player=self.player):
+                active_quest = self.player.get_active_quest(
+                    select_related=("quest",),
+                    prefetch_related=("current_step__options", "changes"),
                 )
-                self.start_playerquest(new_player_quest, quest)
+
+                if active_quest:
+                    # Player has active quest
+                    current_step = active_quest.get_current_step()
+
+                    if active_quest.quest.name == quest.name:
+                        # Player chooses his active quest
+                        if current_step:
+                            # Player quest is not ended, so just continue
+                            if active_quest.is_paid:
+                                vk_utils.build_step(
+                                    self.bot,
+                                    self.update,
+                                    self.upload,
+                                    self.job_queue,
+                                    current_step,
+                                    active_quest,
+                                )
+                            else:
+                                self.send_quest_info(active_quest)
+                        else:
+                            # Quest ended, so suggest to replay it
+                            if active_quest.is_paid:
+                                button_list = VkKeyboard()
+                                button_list.add_button(
+                                    quest_utils.menu_text_full("MAIN_MENU")
+                                )
+                                button_list.add_line()
+                                button_list.add_button(
+                                    quest_utils.menu_text_full("ASK_TO_RESTART")
+                                )
+
+                                self.bot.messages.send(
+                                    peer_id=self.update.obj.from_id,
+                                    random_id=get_random_id(),
+                                    message=(
+                                        config.QUEST_ASK_RESTART
+                                        + ' "'
+                                        + quest_utils.menu_text_full(
+                                            "CONFIRM_TO_RESTART"
+                                        )
+                                        + '"'
+                                    ),
+                                    keyboard=button_list.get_keyboard(),
+                                )
+                    else:
+                        # Player chooses another quest
+                        player_quest = self.player.get_quest_by_pk(quest=quest)
+                        self.start_playerquest(player_quest, quest)
+                else:
+                    # Player has no active quest and chooses one to start
+                    new_player_quest = self.player.get_quest_by_pk(
+                        quest, select_related=("current_step",)
+                    )
+                    self.start_playerquest(new_player_quest, quest)
+            else:
+                self.start_main_menu(text=config.QUEST_IS_NOT_AVAILABLE)
 
     def start_playerquest(self, player_quest, quest):
         if player_quest:
@@ -855,8 +838,8 @@ class VKBot(BaseBot):
                 vk_utils.send_referral_input(self.bot, self.update)
         else:
             player_quest = self.player.get_active_quest(
-                select_related=["quest", "current_step", "player"],
-                prefetch_related=["changes"],
+                select_related=("quest", "current_step", "player"),
+                prefetch_related=("changes",),
             )
             quest = player_quest.quest
 
@@ -879,9 +862,7 @@ class VKBot(BaseBot):
                             (
                                 is_winning,
                                 current_step,
-                            ) = quest_utils.handle_option_message(
-                                self.player, player_quest, option
-                            )
+                            ) = quest_utils.handle_option_message(player_quest, option)
                             result_text = (
                                 config.GAME_WIN_TEXT
                                 if is_winning

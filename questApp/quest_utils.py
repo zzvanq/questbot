@@ -13,7 +13,7 @@ from django.conf import settings
 from questApp.models import Player, PlayersQuestCompleted, Quest
 
 
-def handle_option_message(player, player_quest, option):
+def handle_option_message(player_quest, option):
     # if player has active quest and it's paid
     is_hidden = option.is_hidden
 

@@ -1,72 +1,38 @@
 import os
 import requests
 import json
+import hashlib
 
-from requests.auth import HTTPBasicAuth
+from payment.models import Payment
 
-MERCHANT_ID = os.getenv("MERCHANT_ID")
-MERCHANT_API_KEY = os.getenv("MERCHANT_API_KEY")
-PROJECT_ID = os.getenv("PROJECT_ID")
 HEADERS = {"Content-Type": "application/json", "Accept": "application/json"}
+MERCHANT_SECRET_KEY = os.getenv("MERCHANT_SECRET_KEY")
+MERCHANT_ID = os.getenv("MERCHANT_ID")
+VK_KEY = os.getenv("VK_ACCESS_TOKEN")
+CURRENCY = os.getenv("CURRENCY")
+MERCHANT_URL = "https://anypay.io/merchant"
 
 
-def register_user(user_id, **kwargs):
-    # Request Xsolla project to register new user
-    reg_url = "https://api.xsolla.com/merchant/v2/projects/39756/users"
-    data = {"user_id": str(user_id)}
-
-    return requests.post(
-        reg_url,
-        data=json.dumps(data),
-        headers=HEADERS,
-        auth=HTTPBasicAuth(MERCHANT_ID, MERCHANT_API_KEY),
-    )
+def get_sign(price: int, payment_id: int) -> str:
+    return hashlib.md5(f"{CURRENCY}:{price}:{MERCHANT_SECRET_KEY}:{MERCHANT_ID}:{payment_id}").hexdigest()
 
 
-def get_token(user_id, price, game_id, **kwargs):
-    # Get purchase token
-    token_url = "https://api.xsolla.com/merchant/v2/merchants/74390/token"
+def shorten_url(url: str):
+    vk_api_url = f"https://api.vk.com/method/utils.getShortLink?url={url}&access_token={VK_KEY}&v=5.100"
+    response = requests.get(vk_api_url)
 
-    data = {
-        "user": {"id": {"value": str(user_id)}},
-        "settings": {
-            "project_id": PROJECT_ID,
-            "external_id": game_id,
-            "mode": "sandbox",
-        },
-        "purchase": {"checkout": {"amount": float(price), "currency": "RUB"}},
-    }
-    response = requests.post(
-        token_url,
-        data=json.dumps(data),
-        headers=HEADERS,
-        auth=HTTPBasicAuth(MERCHANT_ID, MERCHANT_API_KEY),
-    )
+    if not response.ok:
+        return None
 
-    token = response.json()
-    return token.get("token", None)
+    json_content = json.loads(response)
+    return json_content["response"]["short_url"]
 
 
-def make_payment(user_id, price, game_id):
-    # Register user, get token and create Payment objects
-    user = register_user(user_id)
-    token = get_token(user_id, price, game_id)
+def make_payment(user_id: int, price: int, quest_id: int) -> str:
+    # get token and create Payment objects
+    sign = get_sign(price, quest_id)
 
-    if token:
-        url_long = "https://secure.xsolla.com/paystation3/?access_token=" + token
-        # r = requests.post("https://api.rebrandly.com/v1/links",
-        #                   data = json.dumps({
-        #                       "destination": url_long,
-        #                       "domain": {"fullName": "rebrand.ly"}
-        #                   }),
-        #                   headers = {
-        #                       "Content-type": "application/json",
-        #                       "apikey": "8ba8ebd726174ed385dc3bac7d6a38d2"
-        #                   })
+    payment, _ = Payment.objects.get_or_create(player_id=user_id, quest_id=quest_id)
 
-        # if (r.status_code == requests.codes.ok):
-        #     link = r.json()
-        #     url = link["shortUrl"]
-        # else:
-        url = url_long
-        return url
+    url_long = f"{MERCHANT_URL}?merchant_id={MERCHANT_ID}&amount={price}&pay_id={payment.id}&sign={sign}"
+    return shorten_url(url_long)

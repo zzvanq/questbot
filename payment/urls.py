@@ -1,6 +1,6 @@
 from django.urls import path
-from .views import xsollaWebhook
+from .views import anypay_webhook
 
 urlpatterns = [
-    path('', xsollaWebhook, name="webhook"),
+    path('', anypay_webhook, name="webhook"),
 ]

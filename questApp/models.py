@@ -1,12 +1,7 @@
-# import os
-
 from django.db import models
 
-# from django.dispatch import receiver
-from django.conf import settings
 from django.core.exceptions import ValidationError
 from django.utils import timezone
-from slugify import slugify
 
 from player.models import Player
 
@@ -17,7 +12,12 @@ class Quest(models.Model):
     price = models.DecimalField(
         "Цена в рублях", max_digits=15, decimal_places=2, default=0
     )
-    max_attempts = models.PositiveIntegerField("Максимальное количество попыток", default=1)
+    max_attempts = models.PositiveIntegerField(
+        "Максимальное количество попыток", default=1
+    )
+    date_sale_end = models.DateTimeField(
+        "Дата окончания продажи", null=True, blank=True
+    )
     players_with_access = models.ManyToManyField(
         "PlayersQuest", related_name="permitted_quests", through="QuestPermittedPlayers"
     )
@@ -68,6 +68,9 @@ class Quest(models.Model):
         if not self.is_active:
             return False
 
+        if self.date_sale_end >= timezone.now():
+            return False
+
         if self.price == 0:
             return True
 
@@ -91,10 +94,8 @@ class QuestPermittedPlayers(models.Model):
 
 
 class Option(models.Model):
-    text = models.CharField("Текст опции", max_length=256)
-
+    text = models.CharField("Текст опции", max_length=256, db_index=True)
     quest = models.ForeignKey(Quest, verbose_name="Квест", on_delete=models.CASCADE)
-
     next_step = models.ForeignKey(
         "Step",
         verbose_name="Следующий шаг",
@@ -103,11 +104,9 @@ class Option(models.Model):
         null=True,
         blank=True,
     )
-
     changes = models.ManyToManyField(
         "self", verbose_name="Изменяет опции", symmetrical=False, blank=True
     )
-
     is_hidden = models.BooleanField("Скрытый", default=False)
     is_winning = models.BooleanField("Победный вариант", default=False)
     index = models.PositiveSmallIntegerField("Индекс отображения", default=1)
@@ -157,14 +156,12 @@ class Step(models.Model):
 
 class PlayersQuest(models.Model):
     quest = models.ForeignKey(Quest, verbose_name="Квест", on_delete=models.CASCADE)
-
     player = models.ForeignKey(
         Player,
         verbose_name="Игрок",
         related_name="player_quests",
         on_delete=models.CASCADE,
     )
-
     current_step = models.ForeignKey(
         Step,
         verbose_name="Текущий шаг",
@@ -172,11 +169,8 @@ class PlayersQuest(models.Model):
         null=True,
         blank=True,
     )
-
     attempts_num = models.PositiveIntegerField("Количество попыток", default=0)
-
     changes = models.ManyToManyField(Option, verbose_name="Изменяет опции", blank=True)
-
     date_started = models.DateTimeField(auto_now_add=True)
     date_changed = models.DateTimeField(auto_now=True)
     is_active = models.BooleanField("Играет прямо сейчас", default=False)
@@ -314,4 +308,3 @@ class PlayersQuestCompleted(models.Model):
     class Meta:
         verbose_name = "Победа игрока"
         verbose_name_plural = "Победы игроков"
-

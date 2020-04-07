@@ -59,7 +59,7 @@ class Player(models.Model):
 
             first_quest = qs.first()
 
-            tqs.exclude(quest=first_quest).delete()
+            qs.exclude(quest=first_quest).delete()
 
             return first_quest
 

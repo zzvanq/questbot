@@ -63,7 +63,7 @@ INSTALLED_APPS = [
 
     # Custom apps
     "questApp",
-    # "payment",
+    "payment",
     "player",
 ]
 
@@ -195,13 +195,13 @@ CONSTANCE_CONFIG = {
     "GAME_WIN_TEXT": ('Вы победили! Чтобы с вами можно было связаться, задайте контакт для связи в меню ', " "),
     "GAME_LOST_TEXT": ("Вы проиграли.", " "),
     "GAME_START_BUTTON": ('Чтобы начать игру нажмите', " "),
-    "BUY_LINK_TEXT": ("Ссылка для покупки квеста:", " "),
+    "BUY_LINK_TEXT": ("Ссылка для покупки квеста:\n", " "),
     "QUEST_IS_NOT_AVAILABLE": ("Квест недоступен", " "),
     "QUEST_IS_ON_AWARDING": ("Этот квест находится в розыгрыше!", " "),
     "QUEST_DESCRIPTION": ("Описание квеста:", " "),
     "QUEST_CONFIRM_RESTART": ("Вы уверены, что хотите начать игру заново?", " "),
     "QUEST_ASK_RESTART": ('Чтобы начать игру заново, нажмите', " "),
-    "QUEST_ATTEMPTS_EXCEEDED": ("Вы больше не можете продолжать этот квест", " "),
+    "QUEST_ATTEMPTS_EXCEEDED": ("Простите, но вы больше не можете проходить этот квест", " "),
     "QUESTS_ALL": ("Список всех квестов:", " "),
     "PLAYER_QUESTS_LIST": ("Список ваших квестов:", " "),
     "PLAYER_NO_QUESTS": ("В данный момент вы не проходите ни один квест.", " "),
