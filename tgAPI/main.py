@@ -43,8 +43,8 @@ def incoming_commands(bot, update, job_queue):
     TGBot.get_command(message, bot_ctx)()
 
 
-def start_main_menu(bot, update, text=config.MAIN_MENU_TEXT, args=None):
-    player, _ = utils.get_or_create_player(bot, update, args)
+def start_main_menu(bot, update, args=None):
+    player, _ = utils.get_or_create_player(bot, update, args=args)
     player_quests = player.has_quests
 
     if player_quests:
@@ -62,7 +62,7 @@ def start_main_menu(bot, update, text=config.MAIN_MENU_TEXT, args=None):
     reply_markup = ReplyKeyboardMarkup(
         utils.build_menu(button_list, n_cols=1), resize_keyboard=True
     )
-    bot.send_message(update.message.chat_id, text, reply_markup=reply_markup)
+    bot.send_message(update.message.chat_id, config.MAIN_MENU_TEXT, reply_markup=reply_markup)
 
 
 class MQBot(telegram.bot.Bot):

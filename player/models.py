@@ -63,7 +63,7 @@ class Player(models.Model):
 
             return first_quest
 
-    def get_active_quest(self, select_related=None, prefetch_related=None):
+    def get_active_quest(self, select_related=None, prefetch_related=None, only=None):
         try:
             qs = self.player_quests
 
@@ -72,6 +72,9 @@ class Player(models.Model):
 
             if prefetch_related:
                 qs.prefetch_related(*prefetch_related)
+
+            if only:
+                qs.only(*only)
 
             player_quest = qs.get(is_active=True)
             return player_quest
@@ -85,6 +88,9 @@ class Player(models.Model):
 
             if prefetch_related:
                 qs.prefetch_related(*prefetch_related)
+
+            if only:
+                qs.only(*only)
 
             player_quest = qs.first()
 

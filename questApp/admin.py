@@ -1,7 +1,12 @@
 from django.contrib import admin
-from .models import Option, PlayersQuest, PlayersQuestCompleted, Quest, Step
+from .models import Option, PlayersQuest, PlayersQuestCompleted, Quest, Step, QuestPermittedPlayers
 
 # Register your models here.
+
+
+class QuestPermittedPlayersInline(admin.TabularInline):
+    model = QuestPermittedPlayers
+    extra = 5
 
 
 class PlayersQuestAdmin(admin.ModelAdmin):
@@ -61,7 +66,14 @@ class OptionAdmin(admin.ModelAdmin):
 
 
 class QuestAdmin(admin.ModelAdmin):
+    search_fields = ("name",)
+    inlines = (QuestPermittedPlayersInline,)
     exclude = ("vk_image_descr", "vk_image_award")
+
+
+class QuestPermittedPlayersAdmin(admin.ModelAdmin):
+    search_fields = ("quest__name", "players_quest__player__name")
+    autocomplete_fields = ("players_quest", "quest")
 
 
 admin.site.register(Quest, QuestAdmin)
@@ -69,3 +81,4 @@ admin.site.register(Step, StepAdmin)
 admin.site.register(Option, OptionAdmin)
 admin.site.register(PlayersQuest, PlayersQuestAdmin)
 admin.site.register(PlayersQuestCompleted, PlayersQuestCompletedAdmin)
+admin.site.register(QuestPermittedPlayers, QuestPermittedPlayersAdmin)

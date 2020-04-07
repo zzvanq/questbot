@@ -2,19 +2,19 @@ import os
 import requests
 import json
 import hashlib
+import urllib.parse
 
 from payment.models import Payment
 
-HEADERS = {"Content-Type": "application/json", "Accept": "application/json"}
 MERCHANT_SECRET_KEY = os.getenv("MERCHANT_SECRET_KEY")
 MERCHANT_ID = os.getenv("MERCHANT_ID")
+MERCHANT_URL = "https://anypay.io/merchant"
 VK_KEY = os.getenv("VK_ACCESS_TOKEN")
 CURRENCY = os.getenv("CURRENCY")
-MERCHANT_URL = "https://anypay.io/merchant"
 
 
 def get_sign(price: int, payment_id: int) -> str:
-    return hashlib.md5(f"{CURRENCY}:{price}:{MERCHANT_SECRET_KEY}:{MERCHANT_ID}:{payment_id}").hexdigest()
+    return hashlib.md5(f"{CURRENCY}:{price}:{MERCHANT_SECRET_KEY}:{MERCHANT_ID}:{payment_id}".encode()).hexdigest()
 
 
 def shorten_url(url: str):
@@ -24,15 +24,24 @@ def shorten_url(url: str):
     if not response.ok:
         return None
 
-    json_content = json.loads(response)
+    json_content = json.loads(response.content)
     return json_content["response"]["short_url"]
 
 
-def make_payment(user_id: int, price: int, quest_id: int) -> str:
-    # get token and create Payment objects
+def make_payment(user_id: int, quest_id: int, price: int) -> str:
+    """
+    Makes payment object and return url to process payment
+
+    :param user_id: Id of user that want to buy
+    :param quest_id: Id of quest that player wants to buy
+    :param price: Price of the quest
+    :return: Url to process payment, 'None' if something goes wrong
+    """
+
+    payment, _ = Payment.objects.get_or_create(player_id=user_id, quest_id=quest_id, defaults={"amount": price})
+
     sign = get_sign(price, quest_id)
-
-    payment, _ = Payment.objects.get_or_create(player_id=user_id, quest_id=quest_id)
-
-    url_long = f"{MERCHANT_URL}?merchant_id={MERCHANT_ID}&amount={price}&pay_id={payment.id}&sign={sign}"
-    return shorten_url(url_long)
+    url_params = urllib.parse.quote(f"merchant_id={MERCHANT_ID}&amount={price}&pay_id={payment.id}&sign={sign}", safe="=")
+    url_long = f"{MERCHANT_URL}?{url_params}"
+    url_short = shorten_url(url_long)
+    return url_short

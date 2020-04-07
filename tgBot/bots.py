@@ -8,17 +8,11 @@ from tgAPI import utils as tg_utils
 from vkAPI import utils as vk_utils
 
 from constance import config
-from slugify import slugify
 from payment import payments
 from questApp import quest_utils
 from vk_api.utils import get_random_id
 from vk_api.keyboard import VkKeyboard
 
-
-# os.environ.setdefault("DJANGO_SETTINGS_MODULE", "tgBot.settings")
-# sys.path.append(os.path.join(os.path.dirname(os.path.realpath(__file__)), os.pardir))
-#
-# django.setup()
 
 # Every commands in list corresponds to an index in 'BOT_MENU'
 commands = settings.BOT_MENU
@@ -126,13 +120,12 @@ class TGBot(BaseBot):
     def send_quest_info(self, player_quest):
         if not player_quest.is_paid:
             payment_url = payments.make_payment(
-                self.player.user_id,
-                player_quest.quest_id,
-                player_quest.quest.price
+                self.player.id, player_quest.quest.id, player_quest.quest.price
             )
-            self.start_main_menu(
-                text=f"{config.BUY_LINK_TEXT}{payment_url}"
-            )
+            if payment_url:
+                self.start_main_menu(text=config.BUY_LINK_TEXT + payment_url)
+            else:
+                self.start_main_menu(text=config.BUY_ERROR)
 
         awarding_description = (
             config.QUEST_IS_ON_AWARDING + "\n" + player_quest.quest.awarding_descr
@@ -440,6 +433,17 @@ class TGBot(BaseBot):
             player_quest = self.player.get_active_quest(
                 select_related=("quest", "current_step", "player"),
                 prefetch_related=("changes",),
+                only=(
+                    "quest__is_active",
+                    "quest__date_sale_end",
+                    "quest__price",
+                    "quest__date_awarding_start",
+                    "quest__date_awarding_end" "current_step",
+                    "player",
+                    "changes",
+                    "is_complete",
+                    "attempts_num",
+                ),
             )
             quest = player_quest.quest
 
@@ -454,7 +458,7 @@ class TGBot(BaseBot):
                         option = (
                             current_step.options.filter(text=self.message)
                             .select_related("next_step")
-                            .prefetch_related("changes", "next_step__options",)
+                            .prefetch_related("changes", "next_step__options")
                             .first()
                         )
 
@@ -582,13 +586,12 @@ class VKBot(BaseBot):
     def send_quest_info(self, player_quest):
         if not player_quest.is_paid:
             payment_url = payments.make_payment(
-                self.player.user_id,
-                player_quest.quest_id,
-                player_quest.quest.price
+                self.player.id, player_quest.quest.id, player_quest.quest.price
             )
-            self.start_main_menu(
-                text=f"{config.BUY_LINK_TEXT}{payment_url}"
-            )
+            if payment_url:
+                self.start_main_menu(text=config.BUY_LINK_TEXT + payment_url)
+            else:
+                self.start_main_menu(text=config.BUY_ERROR)
 
         awarding_description = (
             config.QUEST_IS_ON_AWARDING + "\n" + player_quest.quest.awarding_descr
@@ -840,6 +843,17 @@ class VKBot(BaseBot):
             player_quest = self.player.get_active_quest(
                 select_related=("quest", "current_step", "player"),
                 prefetch_related=("changes",),
+                only=(
+                    "quest__is_active",
+                    "quest__date_sale_end",
+                    "quest__price",
+                    "quest__date_awarding_start",
+                    "quest__date_awarding_end" "current_step",
+                    "player",
+                    "changes",
+                    "is_complete",
+                    "attempts_num",
+                ),
             )
             quest = player_quest.quest
 
@@ -854,7 +868,7 @@ class VKBot(BaseBot):
                         option = (
                             current_step.options.filter(text=self.message)
                             .select_related("next_step")
-                            .prefetch_related("changes", "next_step__options",)
+                            .prefetch_related("changes", "next_step__options")
                             .first()
                         )
 

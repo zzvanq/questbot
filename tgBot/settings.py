@@ -163,17 +163,17 @@ BOT_TG_ID = "@"
 # Telegram API
 
 if DEBUG:
-    BOT_TG_ID += "Quest_teshyu_bot"
+    BOT_TG_ID += os.environ.get("TG_BOT_ID")
     TG_ACCESS_TOKEN = os.environ.get("TG_ACCESS_TOKEN")
-    TG_PROXY_URL = "http://155.138.148.76:8080"
+    TG_PROXY_URL = "http://51.158.165.18:8811"
     VK_ACCESS_TOKEN = os.environ.get("VK_ACCESS_TOKEN")
-    VK_GROUP_ID = "130703093"
+    VK_GROUP_ID = os.environ.get("VK_GROUP_ID")
 else:
-    BOT_TG_ID += "indecent_quests_bot"
+    BOT_TG_ID += os.environ.get("TG_BOT_ID")
     TG_ACCESS_TOKEN = os.environ.get("TG_ACCESS_TOKEN")
     TG_PROXY_URL = ""
     VK_ACCESS_TOKEN = os.environ.get("VK_ACCESS_TOKEN")
-    VK_GROUP_ID = "164636367"
+    VK_GROUP_ID = os.environ.get("VK_GROUP_ID")
 
 TG_JOIN_URL = "https://teleg.run/"
 
@@ -195,7 +195,8 @@ CONSTANCE_CONFIG = {
     "GAME_WIN_TEXT": ('Вы победили! Чтобы с вами можно было связаться, задайте контакт для связи в меню ', " "),
     "GAME_LOST_TEXT": ("Вы проиграли.", " "),
     "GAME_START_BUTTON": ('Чтобы начать игру нажмите', " "),
-    "BUY_LINK_TEXT": ("Ссылка для покупки квеста:\n", " "),
+    "BUY_LINK_TEXT": ("Ссылка для покупки квеста: \n", " "),
+    "BUY_ERROR": ("Что-то пошло не так.", " "),
     "QUEST_IS_NOT_AVAILABLE": ("Квест недоступен", " "),
     "QUEST_IS_ON_AWARDING": ("Этот квест находится в розыгрыше!", " "),
     "QUEST_DESCRIPTION": ("Описание квеста:", " "),

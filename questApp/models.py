@@ -89,8 +89,13 @@ class QuestPermittedPlayers(models.Model):
     quest = models.ForeignKey(Quest, on_delete=models.CASCADE)
     players_quest = models.ForeignKey("PlayersQuest", on_delete=models.CASCADE)
 
+    def __str__(self):
+        return f"{self.quest.name[:8]} - {self.players_quest.player.name}"
+
     class Meta:
         unique_together = ("quest", "players_quest")
+        verbose_name = "Доступ к квесту"
+        verbose_name_plural = "Доступы к квестам"
 
 
 class Option(models.Model):
@@ -269,6 +274,9 @@ class PlayersQuest(models.Model):
                 active_quest.update(is_active=False)
 
         super(PlayersQuest, self).save(*args, **kwargs)
+
+    def __str__(self):
+        return f"{self.quest.name[:8]} - {self.player.name}"
 
     class Meta:
         unique_together = ("player", "quest")
