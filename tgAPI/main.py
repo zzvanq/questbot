@@ -39,8 +39,11 @@ def error(bot, update, err):
 def incoming_commands(bot, update, job_queue):
     message = update.message.text
     bot_ctx = TGBot(message, bot, update, job_queue)
+
     # Get command and run
-    TGBot.get_command(message, bot_ctx)()
+    command = TGBot.get_command(message, bot_ctx)
+    if command:
+        command()
 
 
 def start_main_menu(bot, update, args=None):

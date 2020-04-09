@@ -51,16 +51,18 @@ SITE_URL = "http://91.245.226.181"
 # Application definition
 
 INSTALLED_APPS = [
+    "admin_tools",
+    "admin_tools.theming",
+    "admin_tools.menu",
+    "admin_tools.dashboard",
     "django.contrib.admin",
     "django.contrib.auth",
     "django.contrib.contenttypes",
     "django.contrib.sessions",
     "django.contrib.messages",
     "django.contrib.staticfiles",
-
-    'constance',
-    'constance.backends.database',
-
+    "constance",
+    "constance.backends.database",
     # Custom apps
     "questApp",
     "payment",
@@ -84,13 +86,22 @@ TEMPLATES = [
     {
         "BACKEND": "django.template.backends.django.DjangoTemplates",
         "DIRS": [os.path.join(BASE_DIR, "templates")],
-        "APP_DIRS": True,
         "OPTIONS": {
             "context_processors": [
                 "django.template.context_processors.debug",
                 "django.template.context_processors.request",
                 "django.contrib.auth.context_processors.auth",
                 "django.contrib.messages.context_processors.messages",
+            ],
+            "loaders": [
+                "admin_tools.template_loaders.Loader",
+                (
+                    "django.template.loaders.cached.Loader",
+                    [
+                        "django.template.loaders.filesystem.Loader",
+                        "django.template.loaders.app_directories.Loader",
+                    ],
+                ),
             ],
         },
     },
@@ -177,7 +188,7 @@ else:
 
 TG_JOIN_URL = "https://teleg.run/"
 
-CONSTANCE_BACKEND = 'constance.backends.database.DatabaseBackend'
+CONSTANCE_BACKEND = "constance.backends.database.DatabaseBackend"
 
 CONSTANCE_CONFIG = {
     "MY_GAMES": ("Мои квесты", " "),
@@ -192,17 +203,23 @@ CONSTANCE_CONFIG = {
     "CANCEL_CONTACT": ("Отменить контакт", " "),
     "ADD_CONTACT": ("Добавить контакт", " "),
     "MAIN_MENU_TEXT": ("Главное меню\n", " "),
-    "GAME_WIN_TEXT": ('Вы победили! Чтобы с вами можно было связаться, задайте контакт для связи в меню ', " "),
+    "GAME_WIN_TEXT": (
+        "Вы победили! Чтобы с вами можно было связаться, задайте контакт для связи в меню Настройки",
+        " ",
+    ),
     "GAME_LOST_TEXT": ("Вы проиграли.", " "),
-    "GAME_START_BUTTON": ('Чтобы начать игру нажмите', " "),
+    "GAME_START_BUTTON": ("Чтобы начать игру нажмите", " "),
     "BUY_LINK_TEXT": ("Ссылка для покупки квеста: \n", " "),
     "BUY_ERROR": ("Что-то пошло не так.", " "),
     "QUEST_IS_NOT_AVAILABLE": ("Квест недоступен", " "),
     "QUEST_IS_ON_AWARDING": ("Этот квест находится в розыгрыше!", " "),
     "QUEST_DESCRIPTION": ("Описание квеста:", " "),
     "QUEST_CONFIRM_RESTART": ("Вы уверены, что хотите начать игру заново?", " "),
-    "QUEST_ASK_RESTART": ('Чтобы начать игру заново, нажмите', " "),
-    "QUEST_ATTEMPTS_EXCEEDED": ("Простите, но вы больше не можете проходить этот квест", " "),
+    "QUEST_ASK_RESTART": ("Чтобы начать игру заново, нажмите", " "),
+    "QUEST_ATTEMPTS_EXCEEDED": (
+        "Простите, но вы больше не можете проходить этот квест",
+        " ",
+    ),
     "QUESTS_ALL": ("Список всех квестов:", " "),
     "PLAYER_QUESTS_LIST": ("Список ваших квестов:", " "),
     "PLAYER_NO_QUESTS": ("В данный момент вы не проходите ни один квест.", " "),
@@ -210,8 +227,11 @@ CONSTANCE_CONFIG = {
     "PLAYER_REFERRAL": ("Это ваша реферальная ссылка. Отправьте её другу!", " "),
     "PLAYER_REFERRAL_SET": ("Вы успешно задали пригласившего пользователя", " "),
     "PLAYER_CONTACT": ("Нынешний контакт для связи с вами:", " "),
-    "PLAYER_CONTACT_SET": ("Чтобы задать контакт для связи отправьте его следующим сообщением", " "),
-    "PLAYER_CONTACT_SET_DONE": ("Вы задали новый контакт для связи", " ",)
+    "PLAYER_CONTACT_SET": (
+        "Чтобы задать контакт для связи отправьте его следующим сообщением",
+        " ",
+    ),
+    "PLAYER_CONTACT_SET_DONE": ("Вы задали новый контакт для связи", " ",),
 }
 
 CACHING_TIMEOUTS = {

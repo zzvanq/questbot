@@ -79,7 +79,7 @@ class BaseBot(ABC):
 
     @classmethod
     def get_command(cls, message, ctx):
-        """Returns method corresponding to the given self.message.
+        """Returns method corresponding to the given 'self.message'.
 
         :returns: Corresponding Method if it was found, 'None' otherwise
         """
@@ -153,7 +153,7 @@ class TGBot(BaseBot):
             self.bot.send_message(self.update.message.chat_id, quest_description)
 
     def start_main_menu(self, text=config.MAIN_MENU_TEXT):
-        player_quests = self.player.has_quests
+        player_quests = self.player.has_quests or self.player.is_staff
 
         if player_quests:
             button_list = [
@@ -182,6 +182,7 @@ class TGBot(BaseBot):
                 KeyboardButton(commands["GAME"] + " " + player_quest.quest.name)
                 for player_quest in player_quests
                 if player_quest.quest.check_permission(self.player)
+                and player_quest.is_paid
             ]
             button_list.append(KeyboardButton(quest_utils.menu_text_full("MAIN_MENU")))
             reply_markup = ReplyKeyboardMarkup(
@@ -250,7 +251,10 @@ class TGBot(BaseBot):
                 if active_quest.is_paid:
                     active_quest.clear_game()
 
-                    if active_quest.quest.check_permission(self.player):
+                    if (
+                        active_quest.quest.check_permission(self.player)
+                        and active_quest.is_paid
+                    ):
                         self.start_playerquest(active_quest, active_quest.quest)
                     else:
                         self.start_main_menu(text=config.QUEST_IS_NOT_AVAILABLE)
@@ -271,11 +275,11 @@ class TGBot(BaseBot):
 
         if active_quest:
             tg_utils.build_step(
-                self.bot,
-                self.update,
-                active_quest.get_current_step(),
-                self.job_queue,
-                active_quest,
+                bot=self.bot,
+                update=self.update,
+                step=active_quest.get_current_step(),
+                job_queue=self.job_queue,
+                player_quest=active_quest,
             )
 
     def start_settings_menu(self):
@@ -284,7 +288,7 @@ class TGBot(BaseBot):
             KeyboardButton(quest_utils.menu_text_full("ADD_CONTACT")),
             KeyboardButton(quest_utils.menu_text_full("MAIN_MENU")),
         ]
-        reply_text = config.PLAYER_NO_QUESTS
+
 
         if active_quest:
             button_list_start = [
@@ -304,6 +308,8 @@ class TGBot(BaseBot):
                 + "\n"
                 + self.player.referral_link
             )
+        else:
+            reply_text = config.PLAYER_NO_QUESTS
 
         reply_markup = ReplyKeyboardMarkup(
             tg_utils.build_menu(button_list, n_cols=1), resize_keyboard=True
@@ -322,7 +328,7 @@ class TGBot(BaseBot):
         self.player.start_contact_saving()
         contact = self.player.add_contact
         text = ""
-        if self.player.add_contact:
+        if contact:
             text = config.PLAYER_CONTACT + " " + contact + "\n"
 
         button_list = [KeyboardButton(quest_utils.menu_text_full("CANCEL_CONTACT"))]
@@ -391,6 +397,8 @@ class TGBot(BaseBot):
                                     + '"',
                                     reply_markup=reply_markup,
                                 )
+                            else:
+                                self.send_quest_info(active_quest)
                     else:
                         # Player chooses another quest
                         player_quest = self.player.get_quest_by_pk(quest=quest)
@@ -513,9 +521,8 @@ class VKBot(BaseBot):
         self.upload = upload
         self.player, self.is_created = vk_utils.get_or_create_player(bot, update, args)
 
-    def start_main_menu(self, text=config.MAIN_MENU_TEXT, args=None):
-        player_quests = self.player.has_quests
-
+    def start_main_menu(self, text=config.MAIN_MENU_TEXT):
+        player_quests = self.player.has_quests or self.player.is_staff
         button_list = VkKeyboard()
         if player_quests:
             button_list.add_button(quest_utils.menu_text_full("MY_GAMES"))
@@ -535,7 +542,7 @@ class VKBot(BaseBot):
         if player_quests:
             button_list = VkKeyboard()
             for item in player_quests:
-                if item.quest.check_permission(self.player):
+                if item.quest.check_permission(self.player) and item.is_paid:
                     button_list.add_button(commands["GAME"] + " " + item.quest.name)
                     button_list.add_line()
             button_list.add_button(quest_utils.menu_text_full("MAIN_MENU"))
@@ -543,7 +550,7 @@ class VKBot(BaseBot):
             self.bot.messages.send(
                 peer_id=self.update.obj.from_id,
                 random_id=get_random_id(),
-                message=config.QUESTS_ALL,
+                message=config.PLAYER_QUESTS_LIST,
                 keyboard=button_list.get_keyboard(),
             )
 
@@ -665,14 +672,21 @@ class VKBot(BaseBot):
         active_quest = self.player.get_active_quest(select_related=("quest",))
 
         if active_quest:
-            if active_quest.is_paid:
-                active_quest.clear_game()
-                if active_quest.quest.check_permission(self.player):
-                    self.start_playerquest(active_quest, active_quest.quest)
+            if not active_quest.is_attempts_exceeded:
+                if active_quest.is_paid:
+                    active_quest.clear_game()
+
+                    if (
+                        active_quest.quest.check_permission(self.player)
+                        and active_quest.is_paid
+                    ):
+                        self.start_playerquest(active_quest, active_quest.quest)
+                    else:
+                        self.start_main_menu(text=config.QUEST_IS_NOT_AVAILABLE)
                 else:
-                    self.start_main_menu(text=config.QUEST_IS_NOT_AVAILABLE)
+                    self.send_quest_info(active_quest)
             else:
-                self.send_quest_info(active_quest)
+                self.start_main_menu(text=config.QUEST_ATTEMPTS_EXCEEDED)
 
     def start_game_menu(self):
         active_quest = self.player.get_active_quest(
@@ -685,12 +699,12 @@ class VKBot(BaseBot):
         )
         if active_quest:
             vk_utils.build_step(
-                self.bot,
-                self.update,
-                self.upload,
-                self.job_queue,
-                active_quest.get_current_step(),
-                active_quest,
+                vk=self.bot,
+                event=self.update,
+                upload=self.upload,
+                job_queue=self.job_queue,
+                step=active_quest.get_current_step(),
+                player_quest=active_quest,
             )
 
     def start_settings_menu(self):
@@ -705,6 +719,9 @@ class VKBot(BaseBot):
             button_list.add_button(quest_utils.menu_text_full("RETURN_TO_GAME"))
             button_list.add_line()
             reply_text = config.PLAYER_PLAYING + ' "' + active_quest.quest.name + '"'
+        else:
+            reply_text = config.PLAYER_NO_QUESTS
+
         button_list.add_button(quest_utils.menu_text_full("ADD_CONTACT"))
         button_list.add_line()
         button_list.add_button(quest_utils.menu_text_full("MAIN_MENU"))
@@ -794,6 +811,8 @@ class VKBot(BaseBot):
                                     ),
                                     keyboard=button_list.get_keyboard(),
                                 )
+                            else:
+                                self.send_quest_info(active_quest)
                     else:
                         # Player chooses another quest
                         player_quest = self.player.get_quest_by_pk(quest=quest)

@@ -107,8 +107,9 @@ def send_step_partly(vk, event, job_queue, keyboard, delay_temp, description):
 
 def build_step(vk, event, upload, job_queue, step, player_quest, text="Вы победили!"):
     if step:
+        print(step)
         if step.image:
-            image = get_or_upload_photo(upload, step, "image", player_quest.quest.image)
+            image = get_or_upload_photo(upload, step, "image", step.image)
             vk.messages.send(
                 peer_id=event.obj.from_id, random_id=get_random_id(), attachment=image
             )
@@ -159,6 +160,7 @@ def build_step(vk, event, upload, job_queue, step, player_quest, text="Вы по
 
 def send_referral_input(vk, event):
     player, created = get_or_create_player(vk, event, join=True)
+
     if created:
         player.is_next_message_referral = True
         player.save()

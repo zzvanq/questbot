@@ -24,8 +24,11 @@ def handle_message(bot, update, upload, job_queue):
     bot_ctx = VKBot(
         message=message, bot=bot, update=update, upload=upload, job_queue=job_queue
     )
+
     # Get command and run
-    VKBot.get_command(message, bot_ctx)()
+    command = VKBot.get_command(message, bot_ctx)
+    if command:
+        command()
 
 
 def main():

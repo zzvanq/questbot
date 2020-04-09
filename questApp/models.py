@@ -61,21 +61,17 @@ class Quest(models.Model):
     def first_step(self):
         return self.step_set.filter(is_first=True).first()
 
-    def check_permission(self, player: Player) -> bool:
+    def check_permission(self, player) -> bool:
         if player.is_staff:
             return True
 
         if not self.is_active:
             return False
 
-        if self.date_sale_end >= timezone.now():
+        if timezone.now() > self.date_sale_end:
             return False
 
-        if self.price == 0:
-            return True
-
-        has_access = self.players_with_access.filter(player=player).exists()
-        return has_access
+        return True
 
     def __str__(self):
         return self.name
@@ -186,6 +182,9 @@ class PlayersQuest(models.Model):
         if self.quest.price == 0:
             return True
 
+        if self.player.is_staff:
+            return True
+
         return self.permitted_quests.exists()
 
     @property
@@ -205,6 +204,9 @@ class PlayersQuest(models.Model):
 
     @property
     def is_attempts_exceeded(self):
+        if self.player.is_staff:
+            return False
+
         return self.attempts_num >= self.quest.max_attempts
 
     def set_active(self, save=True):
