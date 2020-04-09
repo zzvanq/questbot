@@ -1,4 +1,5 @@
 from django.contrib import admin
+
 from .models import Option, PlayersQuest, PlayersQuestCompleted, Quest, Step, QuestPermittedPlayers
 
 # Register your models here.
@@ -7,6 +8,7 @@ from .models import Option, PlayersQuest, PlayersQuestCompleted, Quest, Step, Qu
 class QuestPermittedPlayersInline(admin.TabularInline):
     model = QuestPermittedPlayers
     extra = 5
+    can_delete = True
 
 
 class PlayersQuestAdmin(admin.ModelAdmin):
