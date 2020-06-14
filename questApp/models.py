@@ -68,8 +68,9 @@ class Quest(models.Model):
         if not self.is_active:
             return False
 
-        if timezone.now() > self.date_sale_end:
-            return False
+        if self.date_sale_end:
+            if timezone.now() > self.date_sale_end:
+                return False
 
         return True
 

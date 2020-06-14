@@ -39,11 +39,15 @@ def get_or_create_player(vk, event, args=None, join=False):
     user_id = str(event.obj.user_id) if join else str(event.obj.from_id)
     vk_info = vk.users.get(user_ids=user_id)[0]
     player_type = "VK"
-    user_name = str(vk_info["first_name"] or "") + "/" + str(vk_info["last_name"] or "")
     user_login = "VK:" + str(vk_info["id"])
 
     return quest_utils.get_or_create_player(
-        user_name, user_login, user_id, None, player_type
+        user_login,
+        user_id,
+        None,
+        player_type,
+        first_name=vk_info.get("first_name"),
+        second_name=vk_info.get("last_name"),
     )
 
 

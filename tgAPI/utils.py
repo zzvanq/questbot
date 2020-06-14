@@ -36,8 +36,6 @@ def get_or_create_player(bot, update, args=None):
     if args:
         referred_by = Player.objects.filter(user_id=args[0]).first()
 
-    user_name = str(user.first_name or "") + "/" + str(user.last_name or "")
-
     if user.username:
         user_login = "TG:" + user.username
     else:
@@ -47,7 +45,12 @@ def get_or_create_player(bot, update, args=None):
     player_type = "TG"
 
     return quest_utils.get_or_create_player(
-        user_name, user_login, user_id, referred_by, player_type
+        user_login,
+        user_id,
+        referred_by,
+        player_type,
+        first_name=user.first_name,
+        second_name=user.last_name,
     )
 
 

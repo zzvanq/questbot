@@ -31,11 +31,14 @@ def anypay_webhook(request):
         transaction_id = request.POST.get("transaction_id")
         date_pay = request.POST.get("pay_date")
 
-        payment = Payment.objects.get(id=pay_id)
+        payment = Payment.objects.filter(id=pay_id).first()
         payment.amount = amount
         payment.profit = profit
         payment.transaction_id = transaction_id
-        payment.date_pay = datetime.strptime(date_pay, "%d.%m.%Y %H:%M:%S")
+        try:
+            payment.date_pay = datetime.strptime(date_pay, "%d.%m.%Y %H:%M:%S")
+        except ValueError:
+            pass
         payment.save()
 
         return HttpResponse(status=200)

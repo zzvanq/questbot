@@ -5,12 +5,6 @@ from .models import Option, PlayersQuest, PlayersQuestCompleted, Quest, Step, Qu
 # Register your models here.
 
 
-class QuestPermittedPlayersInline(admin.TabularInline):
-    model = QuestPermittedPlayers
-    extra = 5
-    can_delete = True
-
-
 class PlayersQuestAdmin(admin.ModelAdmin):
     list_display = (
         "player",
@@ -69,7 +63,6 @@ class OptionAdmin(admin.ModelAdmin):
 
 class QuestAdmin(admin.ModelAdmin):
     search_fields = ("name",)
-    inlines = (QuestPermittedPlayersInline,)
     exclude = ("vk_image_descr", "vk_image_award")
 
 

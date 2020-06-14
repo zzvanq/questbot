@@ -45,7 +45,7 @@ def make_payment(user_id: int, quest_id: int, price: Decimal) -> str:
         player_id=user_id, quest_id=quest_id, defaults={"amount": price}
     )
 
-    sign = get_sign(price, quest_id)
+    sign = get_sign(price, payment.id)
     url_params = urllib.parse.quote(
         f"merchant_id={MERCHANT_ID}&amount={price}&pay_id={payment.id}&sign={sign}",
         safe="=",

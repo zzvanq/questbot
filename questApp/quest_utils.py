@@ -80,25 +80,27 @@ def get_quest_by_name(name, select_related=None, prefetch_related=None):
         return None
 
 
-def get_or_create_player(user_name, user_login, user_id, referred_by, player_type):
+def get_or_create_player(user_login, user_id, referred_by, player_type, first_name, second_name):
     if user_login:
         player, created = Player.objects.update_or_create(
             user_id=user_id,
+            player_type=player_type,
             defaults={
-                "name": user_name,
+                "first_name": first_name,
+                "second_name": second_name,
                 "user_login": user_login,
                 "referred_by": referred_by,
-                "player_type": player_type,
             },
         )
         return player, created
     else:
         player, created = Player.objects.update_or_create(
             user_id=user_id,
+            player_type=player_type,
             defaults={
-                "name": user_name,
+                "first_name": first_name,
+                "second_name": second_name,
                 "referred_by": referred_by,
-                "player_type": player_type,
             },
         )
         return player, created
