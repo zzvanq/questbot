@@ -68,7 +68,7 @@ class QuestAdmin(admin.ModelAdmin):
 
 class QuestPermittedPlayersAdmin(admin.ModelAdmin):
     search_fields = ("quest__name", "players_quest__player__name")
-    autocomplete_fields = ("players_quest", "quest")
+    autocomplete_fields = ("player", "quest")
 
 
 admin.site.register(Quest, QuestAdmin)

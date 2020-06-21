@@ -3,8 +3,8 @@ from django.conf import settings
 
 
 class Player(models.Model):
-    first_name = models.CharField("Имя пользователя 1", max_length=256, default="")
-    second_name = models.CharField("Имя пользователя 2", max_length=256, default="")
+    first_name = models.CharField("Имя пользователя 1", max_length=256, null=True, blank=True)
+    second_name = models.CharField("Имя пользователя 2", max_length=256, null=True, blank=True)
     user_login = models.CharField(
         "Логин/Контакт для связи",
         max_length=256,
@@ -37,7 +37,7 @@ class Player(models.Model):
 
     @property
     def name(self):
-        return self.first_name + " " + self.second_name
+        return "{} {}".format(self.first_name, self.second_name)
 
     def get_quest_by_pk(self, quest, select_related=None, prefetch_related=None):
         try:
@@ -158,7 +158,7 @@ class Player(models.Model):
         return player_quest
 
     def __str__(self):
-        return self.first_name + " " + self.second_name
+        return "{} {}".format(self.first_name, self.second_name)
 
     class Meta:
         verbose_name = "Игрок"

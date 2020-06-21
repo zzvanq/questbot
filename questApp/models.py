@@ -19,7 +19,7 @@ class Quest(models.Model):
         "Дата окончания продажи", null=True, blank=True
     )
     players_with_access = models.ManyToManyField(
-        "PlayersQuest", related_name="permitted_quests", through="QuestPermittedPlayers"
+        Player, related_name="permitted_quests", through="QuestPermittedPlayers"
     )
     image_descr = models.URLField(
         "Ссылка на Картинку в описании квеста:", null=True, blank=True
@@ -68,6 +68,9 @@ class Quest(models.Model):
         if not self.is_active:
             return False
 
+        if player.permissions.filter(quest_id=self.id).exists():
+            return True
+
         if self.date_sale_end:
             if timezone.now() > self.date_sale_end:
                 return False
@@ -84,13 +87,13 @@ class Quest(models.Model):
 
 class QuestPermittedPlayers(models.Model):
     quest = models.ForeignKey(Quest, on_delete=models.CASCADE)
-    players_quest = models.ForeignKey("PlayersQuest", on_delete=models.CASCADE)
+    player = models.ForeignKey(Player, on_delete=models.CASCADE, related_name="permissions")
 
     def __str__(self):
-        return f"{self.quest.name[:8]} - {self.players_quest.player.name}"
+        return f"{self.quest.name[:8]} - {self.player.name}"
 
     class Meta:
-        unique_together = ("quest", "players_quest")
+        unique_together = ("quest", "player")
         verbose_name = "Доступ к квесту"
         verbose_name_plural = "Доступы к квестам"
 
